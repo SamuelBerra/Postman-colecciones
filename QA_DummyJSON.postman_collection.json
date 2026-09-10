@@ -1,0 +1,259 @@
+{
+  "info": {
+    "_postman_id": "d0d91a5d-2ec9-4f69-8f98-3cf3c61647f1",
+    "name": "QA - DummyJSON API",
+    "description": "Colección de pruebas API para portafolio QA. Incluye validaciones de contrato, autenticación, búsqueda, manejo de error y creación simulada.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Salud de la API",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/test"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Informa estado OK y método GET', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.status).to.eql('ok');",
+              "    pm.expect(body.method).to.eql('GET');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Listar productos paginados",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/products?limit={{limit}}&skip=0",
+          "host": ["{{baseUrl}}"],
+          "path": ["products"],
+          "query": [
+            { "key": "limit", "value": "{{limit}}" },
+            { "key": "skip", "value": "0" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('El contrato de paginación es válido', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.products).to.be.an('array');",
+              "    pm.expect(body.total).to.be.a('number');",
+              "    pm.expect(body.skip).to.eql(0);",
+              "    pm.expect(body.limit).to.eql(Number(pm.environment.get('limit')));",
+              "    pm.expect(body.products.length).to.be.at.most(Number(pm.environment.get('limit')));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Obtener producto por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/products/{{productId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('El producto contiene campos obligatorios con tipos correctos', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.id).to.eql(Number(pm.environment.get('productId')));",
+              "    pm.expect(body.title).to.be.a('string').and.not.empty;",
+              "    pm.expect(body.price).to.be.a('number').and.to.be.above(0);",
+              "    pm.expect(body.category).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Buscar productos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/products/search?q={{searchTerm}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "search"],
+          "query": [{ "key": "q", "value": "{{searchTerm}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('La búsqueda devuelve una lista coherente', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.products).to.be.an('array');",
+              "    pm.expect(body.total).to.be.at.least(body.products.length);",
+              "    body.products.forEach(function (product) {",
+              "        pm.expect(product).to.have.property('id');",
+              "        pm.expect(product).to.have.property('title').that.is.a('string');",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Login y almacenamiento de token",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"expiresInMins\": 30\n}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Retorna tokens y usuario autenticado', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.username).to.eql(pm.environment.get('username'));",
+              "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+              "    pm.expect(body.refreshToken).to.be.a('string').and.not.empty;",
+              "    pm.environment.set('accessToken', body.accessToken);",
+              "    pm.environment.set('refreshToken', body.refreshToken);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Consultar usuario autenticado",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": "{{baseUrl}}/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('El usuario coincide con la sesión iniciada', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.username).to.eql(pm.environment.get('username'));",
+              "    pm.expect(body.email).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Producto inexistente devuelve 404",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/products/{{missingProductId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Incluye un mensaje de error comprensible', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.message).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Crear producto simulado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Producto QA de prueba\",\n  \"price\": 99.99,\n  \"category\": \"beauty\"\n}"
+        },
+        "url": "{{baseUrl}}/products/add"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Devuelve HTTP 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Retorna los datos del producto creado', function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.id).to.be.a('number');",
+              "    pm.expect(body.title).to.eql('Producto QA de prueba');",
+              "    pm.expect(body.price).to.eql(99.99);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
